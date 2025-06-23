@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spinning Duck</title>
     <link rel="icon" href="duck.png" type="image/png">
+    <script defer data-domain="duck.joshattic.us" src="https://plausible.joshatticus.site/js/script.file-downloads.outbound-links.js"></script>
     <style>
         body {
             margin: 0;
@@ -16,35 +17,83 @@
             align-items: center;
             gap: 20px;
         }
-        video {
-            max-width: 90%;
-            max-height: 80vh;
+        canvas {
+            width: 50vmin;
+            height: 50vmin;
             border: none;
             outline: none;
+            background: transparent;
+        }
+        video {
+            display: none;
         }
         button {
             padding: 12px 24px;
             font-size: 1.5rem;
             cursor: pointer;
         }
+        footer {
+            position: absolute;
+            bottom: 10px;
+            font-size: 0.9rem;
+            color: #333;
+            font-family: sans-serif;
+        }
     </style>
 </head>
 <body>
 
-    <video id="duckVideo" loop playsinline>
+    <video id="duckVideo" loop playsinline disablepictureinpicture controls="false">
         <source src="duck.mp4" type="video/mp4">
         upgrade your browser stupid it doesn't even support mp4 smh my head
     </video>
 
+    <canvas id="canvas"></canvas>
+
     <button id="spinButton">make it spin</button>
+
+    <footer id="footer">
+        &copy; 2025 JoshAtticus | <a href="https://github.com/JoshAtticus/SpinningDuck" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+    </footer>
 
     <script>
         const video = document.getElementById('duckVideo');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
         const button = document.getElementById('spinButton');
+        const footer = document.getElementById('footer');
 
         button.addEventListener('click', () => {
             video.play();
             button.style.display = 'none';
+            footer.style.display = 'none';
+            
+            const setupCanvasAndDraw = () => {
+                // Set canvas size to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw video frames to canvas
+                function drawFrame() {
+                    if (!video.paused && !video.ended) {
+                        // Clip 1px from each side of the video to remove any potential border in the video file itself
+                        const sx = 1;
+                        const sy = 1;
+                        const sWidth = video.videoWidth - 2;
+                        const sHeight = video.videoHeight - 2;
+                        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+                    }
+                    requestAnimationFrame(drawFrame);
+                }
+                drawFrame();
+            };
+
+            // Check if metadata is already loaded, otherwise wait for it
+            if (video.readyState >= 1) { // HAVE_METADATA
+                setupCanvasAndDraw();
+            } else {
+                video.addEventListener('loadedmetadata', setupCanvasAndDraw);
+            }
         });
     </script>
 
