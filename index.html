@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spinning Duck</title>
     <link rel="icon" href="duck.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script defer data-domain="duck.joshattic.us" src="https://plausible.joshatticus.site/js/script.file-downloads.outbound-links.js"></script>
     <style>
         body {
@@ -39,6 +40,18 @@
             color: #333;
             font-family: sans-serif;
         }
+        #fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #333;
+            cursor: pointer;
+            z-index: 10;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -48,6 +61,7 @@
         upgrade your browser stupid it doesn't even support mp4 smh my head
     </video>
 
+    <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
     <canvas id="canvas"></canvas>
 
     <button id="spinButton">make it spin</button>
@@ -62,11 +76,13 @@
         const ctx = canvas.getContext('2d');
         const button = document.getElementById('spinButton');
         const footer = document.getElementById('footer');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
 
         button.addEventListener('click', () => {
             video.play();
             button.style.display = 'none';
             footer.style.display = 'none';
+            fullscreenBtn.style.display = 'block';
             
             const setupCanvasAndDraw = () => {
                 // Set canvas size to match video
@@ -93,6 +109,27 @@
                 setupCanvasAndDraw();
             } else {
                 video.addEventListener('loadedmetadata', setupCanvasAndDraw);
+            }
+        });
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                canvas.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const icon = fullscreenBtn.querySelector('i');
+            if (document.fullscreenElement) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
             }
         });
     </script>
