@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spinning Duck</title>
+    <link rel="icon" href="duck.png" type="image/png">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        video {
+            max-width: 90%;
+            max-height: 80vh;
+            border: none;
+            outline: none;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <video id="duckVideo" loop playsinline>
+        <source src="duck.mp4" type="video/mp4">
+        upgrade your browser stupid it doesn't even support mp4 smh my head
+    </video>
+
+    <button id="spinButton">make it spin</button>
+
+    <script>
+        const video = document.getElementById('duckVideo');
+        const button = document.getElementById('spinButton');
+
+        button.addEventListener('click', () => {
+            video.play();
+            button.style.display = 'none';
+        });
+    </script>
+
+</body>
+</html>
