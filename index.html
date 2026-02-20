@@ -64,6 +64,9 @@
     <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
     <canvas id="canvas"></canvas>
 
+    <div id="loadingMessage" style="display: none; font-family: sans-serif; font-size: 1.2rem;">high tech duck technology initialising</div>
+    <div id="bufferingMessage" style="display: none; font-family: sans-serif; font-size: 1.2rem; color: #888;">Buffer... buffer... spin...</div>
+
     <button id="spinButton">make it spin</button>
 
     <footer id="footer">
@@ -77,13 +80,28 @@
         const button = document.getElementById('spinButton');
         const footer = document.getElementById('footer');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const bufferingMessage = document.getElementById('bufferingMessage');
+
+        video.addEventListener('waiting', () => {
+            bufferingMessage.style.display = 'block';
+        });
+        video.addEventListener('playing', () => {
+            bufferingMessage.style.display = 'none';
+        });
 
         button.addEventListener('click', () => {
-            video.play();
             button.style.display = 'none';
             footer.style.display = 'none';
-            fullscreenBtn.style.display = 'block';
+            loadingMessage.style.display = 'block';
             
+            video.play().then(() => {
+                loadingMessage.style.display = 'none';
+                fullscreenBtn.style.display = 'block';
+            }).catch(e => {
+                loadingMessage.textContent = "Error loading duck: " + e.message;
+            });
+
             const setupCanvasAndDraw = () => {
                 // Set canvas size to match video
                 canvas.width = video.videoWidth;
