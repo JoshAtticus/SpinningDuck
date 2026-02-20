@@ -58,21 +58,26 @@
                 speed: {type: 'number', default: 0.5},
                 minDistance: {type: 'number', default: 1}
             },
-            init: function () {
-                this.camera = document.querySelector('a-scene').camera;
-            },
             tick: function (time, timeDelta) {
-                if (!this.camera) return;
+                // Get camera from scene if valid
+                const camera = this.el.sceneEl.camera;
+                if (!camera) return;
                 
-                const target = this.camera.el.object3D.position;
-                const current = this.el.object3D.position;
+                // Get positions
+                const targetPos = new THREE.Vector3();
+                camera.el.object3D.getWorldPosition(targetPos);
+                
+                const currentPos = new THREE.Vector3();
+                this.el.object3D.getWorldPosition(currentPos);
                 
                 // Calculate direction vector
-                const direction = new THREE.Vector3().subVectors(target, current);
+                const direction = new THREE.Vector3().subVectors(targetPos, currentPos);
                 const distance = direction.length();
                 
-                // Stop if too close
-                if (distance < this.data.minDistance) return;
+                // Stop if too close (and maybe bob in place?)
+                if (distance < this.data.minDistance) {
+                    return;
+                }
                 
                 // Normalize and scale by speed
                 direction.normalize().multiplyScalar((this.data.speed * timeDelta) / 1000);
@@ -80,21 +85,59 @@
                 // Move towards player
                 this.el.object3D.position.add(direction);
                 
-                // Also always face the player (optional, but creepy/good)
-                this.el.object3D.lookAt(target);
+                // Face the player
+                this.el.object3D.lookAt(targetPos);
+            }
+        });
+
+        AFRAME.registerComponent('controller-duck', {
+            init: function() {
+                // Create a small duck video plane attached to the controller
+                const duck = document.createElement('a-video');
+                duck.setAttribute('src', '#duckVideo');
+                duck.setAttribute('width', '0.3');
+                duck.setAttribute('height', '0.17');
+                duck.setAttribute('position', '0 0.1 0');
+                duck.setAttribute('rotation', '-90 0 0'); // Face up
+                duck.setAttribute('spin-thing', 'speed: 2; axis: z');
+                this.el.appendChild(duck);
             }
         });
 
         AFRAME.registerComponent('teleport-reset', {
+            init: function() {
+                this.hudMessage = document.querySelector('#hud-message');
+                this.timer = null;
+            },
             tick: function () {
                 const camera = this.el.sceneEl.camera;
                 if (!camera) return;
                 
-                const distance = camera.el.object3D.position.length();
+                // Get world position of the camera (which moves inside the rig)
+                const position = new THREE.Vector3();
+                camera.el.object3D.getWorldPosition(position);
+                
+                // Check distance from origin (0, 0, 0)
+                const distance = position.length();
+
                 if (distance > 20) {
-                    // If player tries to run away (gets 20 units from center), teleport them back to the center of the duckverse
+                    // Reset rig position
+                    const rig = document.querySelector('#rig');
+                    if (rig) rig.object3D.position.set(0, 0, 0);
+
+                    // Reset camera local position if wasd-controls are being used heavily
                     camera.el.object3D.position.set(0, 1.6, 0);
-                    // maybe show a message or just disorient them
+
+                    // Show message
+                    if (this.hudMessage) {
+                        this.hudMessage.setAttribute('visible', true);
+                        this.hudMessage.setAttribute('value', "You can run, but in the end, DUCK.");
+                        
+                        if (this.timer) clearTimeout(this.timer);
+                        this.timer = setTimeout(() => {
+                            this.hudMessage.setAttribute('visible', false);
+                        }, 5000);
+                    }
                 }
             }
         });
@@ -114,6 +157,27 @@
             <video id="duckVideo" src="duck.mp4" loop playsinline crossorigin="anonymous"></video>
         </a-assets>
 
+        <!-- Player Rig for movement -->
+        <a-entity id="rig" position="0 0 0">
+            <a-entity camera position="0 1.6 0" look-controls wasd-controls>
+                <!-- HUD Message Text attached to face -->
+                <a-text id="hud-message" 
+                        value="" 
+                        position="0 0 -1" 
+                        align="center" 
+                        width="2" 
+                        color="#FF0000" 
+                        font="exo2bold"
+                        visible="false"
+                        material="shader: flat; depthTest: false"
+                        z-index="999">
+                </a-text>
+            </a-entity>
+            <!-- Controllers with Duck attached -->
+            <a-entity oculus-touch-controls="hand: left" laser-controls="hand: left" raycaster="objects: .clickable" controller-duck></a-entity>
+            <a-entity oculus-touch-controls="hand: right" laser-controls="hand: right" raycaster="objects: .clickable" controller-duck></a-entity>
+        </a-entity>
+
         <!-- The Prime Duck (Front) with Spatial Audio -->
         <a-video src="#duckVideo" position="0 1.6 -2" width="4" height="2.25" spin-thing="speed: 0.5"></a-video>
         
@@ -122,11 +186,20 @@
 
         <!-- Surround Ducks (The Cube of Duck) -->
         <a-video src="#duckVideo" position="3 1.6 0" rotation="0 -90 0" width="4" height="2.25" spin-thing="speed: 0.8"></a-video>
-        <a-video src="#duckVideo" position="-3 1.6 0" rotation="0 90 0" width="4" height="2.25" spin-thing="speed: 0.8"></a-video>
-        <a-video src="#duckVideo" position="0 1.6 3" rotation="0 180 0" width="4" height="2.25" spin-thing="speed: 0.5"></a-video>
-        <a-video src="#duckVideo" position="0 4 0" rotation="90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
-        <a-video src="#duckVideo" position="0 -1 0" rotation="-90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
+        <a-entity position="3 1.6 0" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 2"></a-entity>
 
+        <a-video src="#duckVideo" position="-3 1.6 0" rotation="0 90 0" width="4" height="2.25" spin-thing="speed: 0.8"></a-video>
+        <a-entity position="-3 1.6 0" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 2"></a-entity>
+
+        <a-video src="#duckVideo" position="0 1.6 3" rotation="0 180 0" width="4" height="2.25" spin-thing="speed: 0.5"></a-video>
+        <a-entity position="0 1.6 3" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 2"></a-entity>
+
+        <a-video src="#duckVideo" position="0 4 0" rotation="90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
+        <a-entity position="0 4 0" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 2"></a-entity>
+
+        <a-video src="#duckVideo" position="0 -1 0" rotation="-90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
+        <a-entity position="0 -1 0" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 2"></a-entity>
+        
         <!-- Dynamic Duck Spawner will inject more ducks here -->
         <a-entity id="duck-swarm"></a-entity>
 
@@ -170,9 +243,9 @@
                 const radius = 5 + Math.random() * 10;
                 
                 const x = radius * Math.sin(phi) * Math.cos(theta);
-                const y = radius * Math.sin(phi) * Math.sin(theta) + 1.6; // center vertically around eye level
+                const y = radius * Math.sin(phi) * Math.sin(theta) + 1.6;
                 const z = radius * Math.cos(phi);
-                
+
                 el.setAttribute('position', `${x} ${y} ${z}`);
                 
                 // Random size
@@ -185,11 +258,30 @@
 
                 // Determine behavior
                 if (Math.random() < chaseChance) {
-                    // Chasing duck - faster now
-                    el.setAttribute('chase-player', `speed: ${0.5 + Math.random() * 2}; minDistance: 0.5`);
+                    // Chasing duck - FASTER
+                    el.setAttribute('chase-player', `speed: ${1.5 + Math.random() * 3}; minDistance: 0.5`);
+                    // Sound
+                    el.setAttribute('sound', {
+                        src: '#duckVideo',
+                        autoplay: true,
+                        loop: true,
+                        distanceModel: 'exponential',
+                        rolloffFactor: 5,
+                        volume: 0.5
+                    });
                 } else {
                     // Just spinning duck
                     const axis = Math.random() > 0.66 ? 'x' : (Math.random() > 0.33 ? 'y' : 'z');
+                    // Add sound to spinners
+                    el.setAttribute('sound', {
+                        src: '#duckVideo',
+                        autoplay: true,
+                        loop: true,
+                        distanceModel: 'exponential',
+                        rolloffFactor: 10,
+                        volume: 0.2
+                    });
+
                     const speed = 1 + Math.random() * 5; // fast spin
                     el.setAttribute('spin-thing', `speed: ${speed}; axis: ${axis}`);
                 }
