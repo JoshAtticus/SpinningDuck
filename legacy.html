@@ -18,15 +18,11 @@
             align-items: center;
             gap: 20px;
         }
-        canvas {
+        video {
             width: 50vmin;
             height: 50vmin;
-            border: none;
-            outline: none;
-            background: transparent;
-        }
-        video {
             display: none;
+            outline: none;
         }
         button {
             padding: 12px 24px;
@@ -62,21 +58,18 @@
     </video>
 
     <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
-    <canvas id="canvas"></canvas>
 
-    <div id="loadingMessage" style="display: none; font-family: sans-serif; font-size: 1.2rem;">high tech duck technology initialising</div>
+    <div id="loadingMessage" style="display: none; font-family: sans-serif; font-size: 1.2rem;">legacy duck technology initialising</div>
     <div id="bufferingMessage" style="display: none; font-family: sans-serif; font-size: 1.2rem; color: #888;">Buffer... buffer... spin...</div>
 
     <button id="spinButton">make it spin</button>
 
     <footer id="footer">
-        &copy; 2025 JoshAtticus | <a href="https://github.com/JoshAtticus/SpinningDuck" target="_blank" rel="noopener noreferrer">View on GitHub</a> | <a href="legacy.html">Legacy</a> | <a href="vr.html">VR</a>
+        &copy; 2025 JoshAtticus | <a href="https://github.com/JoshAtticus/SpinningDuck" target="_blank" rel="noopener noreferrer">View on GitHub</a> | <a href="index.html">Modern</a> | <a href="vr.html">VR</a>
     </footer>
 
     <script>
         const video = document.getElementById('duckVideo');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
         const button = document.getElementById('spinButton');
         const footer = document.getElementById('footer');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
@@ -97,42 +90,16 @@
             
             video.play().then(() => {
                 loadingMessage.style.display = 'none';
+                video.style.display = 'block';
                 fullscreenBtn.style.display = 'block';
             }).catch(e => {
                 loadingMessage.textContent = "Error loading duck: " + e.message;
             });
-
-            const setupCanvasAndDraw = () => {
-                // Set canvas size to match video
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                // Draw video frames to canvas
-                function drawFrame() {
-                    if (!video.paused && !video.ended) {
-                        // Clip 1px from each side of the video to remove any potential border in the video file itself
-                        const sx = 1;
-                        const sy = 1;
-                        const sWidth = video.videoWidth - 2;
-                        const sHeight = video.videoHeight - 2;
-                        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
-                    }
-                    requestAnimationFrame(drawFrame);
-                }
-                drawFrame();
-            };
-
-            // Check if metadata is already loaded, otherwise wait for it
-            if (video.readyState >= 1) { // HAVE_METADATA
-                setupCanvasAndDraw();
-            } else {
-                video.addEventListener('loadedmetadata', setupCanvasAndDraw);
-            }
         });
 
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                canvas.requestFullscreen().catch(err => {
+                video.requestFullscreen().catch(err => {
                     alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
                 });
             } else {
@@ -145,6 +112,7 @@
             if (document.fullscreenElement) {
                 icon.classList.remove('fa-expand');
                 icon.classList.add('fa-compress');
+                video.controls = false; // Ensure controls don't appear in fullscreen if possible
             } else {
                 icon.classList.remove('fa-compress');
                 icon.classList.add('fa-expand');

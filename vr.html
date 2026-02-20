@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spinning Duck^3</title>
+    <link rel="icon" href="duck.png" type="image/png">
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script defer data-domain="duck.joshattic.us" src="https://plausible.joshatticus.site/js/script.file-downloads.outbound-links.js"></script>
+    <style>
+        #overlay {
+            position: absolute;
+            z-index: 999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        footer {
+            position: absolute;
+            bottom: 10px;
+            font-size: 0.9rem;
+            color: #333;
+            font-family: sans-serif;
+            text-align: center;
+        }
+        h1 {
+            font-family: sans-serif;
+        }
+    </style>
+    <script>
+        AFRAME.registerComponent('spin-thing', {
+            schema: {
+                speed: {type: 'number', default: 1},
+                axis: {type: 'string', default: 'y'}
+            },
+            tick: function (time, timeDelta) {
+                const rotation = (this.data.speed * timeDelta) / 1000;
+                if (this.data.axis === 'x') this.el.object3D.rotation.x += rotation;
+                if (this.data.axis === 'y') this.el.object3D.rotation.y += rotation;
+                if (this.data.axis === 'z') this.el.object3D.rotation.z += rotation;
+            }
+        });
+
+        AFRAME.registerComponent('chase-player', {
+            schema: {
+                speed: {type: 'number', default: 0.5},
+                minDistance: {type: 'number', default: 1}
+            },
+            init: function () {
+                this.camera = document.querySelector('a-scene').camera;
+            },
+            tick: function (time, timeDelta) {
+                if (!this.camera) return;
+                
+                const target = this.camera.el.object3D.position;
+                const current = this.el.object3D.position;
+                
+                // Calculate direction vector
+                const direction = new THREE.Vector3().subVectors(target, current);
+                const distance = direction.length();
+                
+                // Stop if too close
+                if (distance < this.data.minDistance) return;
+                
+                // Normalize and scale by speed
+                direction.normalize().multiplyScalar((this.data.speed * timeDelta) / 1000);
+                
+                // Move towards player
+                this.el.object3D.position.add(direction);
+                
+                // Also always face the player (optional, but creepy/good)
+                this.el.object3D.lookAt(target);
+            }
+        });
+
+        AFRAME.registerComponent('teleport-reset', {
+            tick: function () {
+                const camera = this.el.sceneEl.camera;
+                if (!camera) return;
+                
+                const distance = camera.el.object3D.position.length();
+                if (distance > 20) {
+                    // If player tries to run away (gets 20 units from center), teleport them back to the center of the duckverse
+                    camera.el.object3D.position.set(0, 1.6, 0);
+                    // maybe show a message or just disorient them
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="overlay">
+        <h1>VR Duck Universe</h1>
+        <button id="enterVRButton">Enter the Duck Dimension</button>
+        <footer id="footer">
+            &copy; 2025 JoshAtticus | <a href="https://github.com/JoshAtticus/SpinningDuck" target="_blank" rel="noopener noreferrer">View on GitHub</a> | <a href="index.html">Modern</a> | <a href="legacy.html">Legacy</a>
+        </footer>
+    </div>
+
+    <a-scene teleport-reset>
+        <a-assets>
+            <video id="duckVideo" src="duck.mp4" loop playsinline crossorigin="anonymous"></video>
+        </a-assets>
+
+        <!-- The Prime Duck (Front) with Spatial Audio -->
+        <a-video src="#duckVideo" position="0 1.6 -2" width="4" height="2.25" spin-thing="speed: 0.5"></a-video>
+        
+        <!-- Spatial Audio Emitter linked to the video -->
+        <a-entity position="0 1.6 -2" sound="src: #duckVideo; autoplay: true; loop: true; distanceModel: exponential; rolloffFactor: 1"></a-entity>
+
+        <!-- Surround Ducks (The Cube of Duck) -->
+        <a-video src="#duckVideo" position="3 1.6 0" rotation="0 -90 0" width="4" height="2.25" spin-thing="speed: 0.8"></a-video>
+        <a-video src="#duckVideo" position="-3 1.6 0" rotation="0 90 0" width="4" height="2.25" spin-thing="speed: 0.8"></a-video>
+        <a-video src="#duckVideo" position="0 1.6 3" rotation="0 180 0" width="4" height="2.25" spin-thing="speed: 0.5"></a-video>
+        <a-video src="#duckVideo" position="0 4 0" rotation="90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
+        <a-video src="#duckVideo" position="0 -1 0" rotation="-90 0 0" width="4" height="2.25" spin-thing="speed: 1.2"></a-video>
+
+        <!-- Dynamic Duck Spawner will inject more ducks here -->
+        <a-entity id="duck-swarm"></a-entity>
+
+        <!-- Ambient lighting -->
+        <a-sky color="#000000"></a-sky>
+    </a-scene>
+
+    <script>
+        const video = document.getElementById('duckVideo');
+        const button = document.getElementById('enterVRButton');
+        const overlay = document.getElementById('overlay');
+        const scene = document.querySelector('a-scene');
+        const duckSwarm = document.getElementById('duck-swarm');
+
+        button.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            video.play();
+            // Enter VR mode automatically if possible, or just start the scene
+            scene.enterVR();
+        });
+        
+        // Handle exiting VR to show overlay again if desired, but for now simple is fine.
+        scene.addEventListener('exit-vr', () => {
+             // Maybe pause video?
+             video.pause();
+             overlay.style.display = 'flex';
+        });
+
+        // Spawn MORE DUCK
+        function spawnDucks() {
+            const numberOfDucks = 50;
+            const chaseChance = 0.2; // 20% of ducks will chase you
+
+            for (let i = 0; i < numberOfDucks; i++) {
+                const el = document.createElement('a-video');
+                el.setAttribute('src', '#duckVideo');
+                
+                // Random position in a sphere around player (radius 5-15)
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const radius = 5 + Math.random() * 10;
+                
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.sin(phi) * Math.sin(theta) + 1.6; // center vertically around eye level
+                const z = radius * Math.cos(phi);
+                
+                el.setAttribute('position', `${x} ${y} ${z}`);
+                
+                // Random size
+                const scale = 0.5 + Math.random() * 1.5;
+                el.setAttribute('width', 1.6 * scale); // maintain aspect ratioish
+                el.setAttribute('height', 0.9 * scale);
+                
+                // Look at center
+                el.setAttribute('look-at', '0 1.6 0');
+
+                // Determine behavior
+                if (Math.random() < chaseChance) {
+                    // Chasing duck - faster now
+                    el.setAttribute('chase-player', `speed: ${0.5 + Math.random() * 2}; minDistance: 0.5`);
+                } else {
+                    // Just spinning duck
+                    const axis = Math.random() > 0.66 ? 'x' : (Math.random() > 0.33 ? 'y' : 'z');
+                    const speed = 1 + Math.random() * 5; // fast spin
+                    el.setAttribute('spin-thing', `speed: ${speed}; axis: ${axis}`);
+                }
+
+                duckSwarm.appendChild(el);
+            }
+        }
+
+        // Initialize swarm
+        spawnDucks();
+    </script>
+</body>
+</html>
